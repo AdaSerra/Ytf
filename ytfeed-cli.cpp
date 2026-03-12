@@ -13,15 +13,16 @@
 #include <fstream>
 #include <regex>
 #include <algorithm>
+#include <locale>
 #include <codecvt>
 #include <fcntl.h>
 #include "types.h"
 #include "sqll.h"
 
-#pragma comment(lib, "msxml6.lib") //xml parser
-#pragma comment(lib, "winsqlite3.lib") //sqlite v3 for win
-#pragma comment(lib, "winhttp.lib")    //http win client
-#pragma comment(lib, "ole32.lib")  // CoInitialize and CoUninitialize
+#pragma comment(lib, "msxml6.lib")     // xml parser
+#pragma comment(lib, "winsqlite3.lib") // sqlite v3 for win
+#pragma comment(lib, "winhttp.lib")    // http win client
+#pragma comment(lib, "ole32.lib")      // CoInitialize and CoUninitialize
 
 inline const std::wregex CHANNEL_ID_REGEX(L"^UC[A-Za-z0-9_-]{22}$");
 constexpr wchar_t YOUTUBE_HOST[] = L"www.youtube.com";
@@ -33,8 +34,11 @@ std::vector<std::wstring> channels;
 std::vector<Channel> chns;
 HRESULT hr = S_OK;
 bool single = false;
-std::vector<Video> videos;
+bool web = false;
+bool news = false;
 Sqlite db(L"local.db");
+std::vector<Video> videos;
+
 size_t cv = 0;
 
 int is_number(const char *str)
@@ -67,7 +71,7 @@ bool isValidFilename(const char *filename)
     if (len == 0)
         return false;
 
-    // Rifiuta "." e ".."
+    // refuse "." ".."
     if (strcmp(filename, ".") == 0 || strcmp(filename, "..") == 0)
         return false;
 
@@ -88,9 +92,9 @@ bool isValidFilename(const char *filename)
     if (!base)
         base = filename;
     else
-        base++; 
+        base++;
 
-    // Reserved name Windows
+    // Reserved Windows name
     const char *reserved[] = {
         "CON", "PRN", "AUX", "NUL",
         "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
@@ -119,6 +123,23 @@ bool isValidFilename(const char *filename)
     }
 
     return true;
+}
+
+std::string to_utf8(const std::wstring &w)
+{
+    static std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
+    return conv.to_bytes(w);
+}
+
+std::wstring to_utf16(const std::string &s)
+{
+    static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
+    return conv.from_bytes(s);
+}
+
+inline std::string u8s(const char *s)
+{
+    return std::string(s);
 }
 
 void readFile()
@@ -170,7 +191,7 @@ void parseXML(const wchar_t *wbuffer, Channel &channel)
     if (FAILED(hr) || !pXMLDoc)
     {
         std::wcerr << L"Error: impossible create XML istance\n";
-        return;
+        exit(1);
     }
 
     VARIANT_BOOL loaded = VARIANT_FALSE;
@@ -180,7 +201,7 @@ void parseXML(const wchar_t *wbuffer, Channel &channel)
     {
         std::wcerr << L"Error: parsing XML internal error\n";
         pXMLDoc->Release();
-        return;
+        exit(1);
     }
 
     // --- extract name channel ---
@@ -242,7 +263,7 @@ void parseXML(const wchar_t *wbuffer, Channel &channel)
             extract(link, L".//*[local-name()='link']/@href");
 
             is_short = (link.length() == 43) ? false : true;
-          
+
             Video video(times, 0, channel.name, title, id, is_short);
             videos.emplace_back(std::move(video));
 
@@ -309,35 +330,96 @@ void getFeed(HINTERNET &session, HINTERNET &connect, wchar_t *url, Channel &chan
     WinHttpCloseHandle(hRequest);
 };
 
+void generateHTML(const std::vector<Video> &videos)
+{
+    std::ofstream htmlFile("feed.html", std::ios::binary);
+    if (!htmlFile.is_open())
+        return;
+
+    // Header
+    htmlFile << u8s("<!DOCTYPE html><html lang='it'><head><meta charset='UTF-8'>"
+                    "<title>YouTube Feed</title>"
+                    "<style>"
+                    "body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #0f0f0f; color: white; padding: 40px; }"
+                    "h1, h3 { text-align: center; color: #ff0000; }"
+                    ".stats { text-align: center; margin-bottom: 30px; color: #aaa; }"
+                    ".grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; max-width: 1400px; margin: 0 auto; }"
+                    ".card { background: #1e1e1e; border-radius: 12px; overflow: hidden; transition: transform 0.2s; border: 1px solid #333; }"
+                    ".card:hover { transform: scale(1.05); border-color: #ff0000; }"
+                    "img { width: 100%; aspect-ratio: 16/9; object-fit: cover; }"
+                    ".info { padding: 15px; }"
+                    "a { text-decoration: none; color: white; }"
+                    "h4 { font-size: 14px; margin: 0 0 8px 0; line-height: 1.4; height: 2.8em; overflow: hidden; }"
+                    ".author { font-size: 12px; color: #aaa; margin: 0; }"
+                    "</style></head><body>");
+
+    htmlFile << "<h1>YouTube Feed Update</h1>";
+    htmlFile << "<div class='stats'>New Videos: "
+             << cv << " | New Channel: " << newchan << "</div>";
+
+    htmlFile << "<div class='grid'>";
+
+    // Loop video
+    for (int i = 0; i < videos.size() && i < limit; i++)
+    {
+        htmlFile << "<div class='card'>"
+                 << "<a href='https://www.youtube.com/watch?v=" << to_utf8(videos[i].id) << "' target='_blank'>"
+                 << "<img src='https://i.ytimg.com/vi/" << to_utf8(videos[i].id) << "/mqdefault.jpg'>"
+                 << "<div class='info'>"
+                 << "<h4>" << to_utf8(videos[i].title) << "</h4>"
+                 << "<p class='author'>" << to_utf8(videos[i].author) << "</p>"
+                 << "</div></a></div>";
+    }
+
+    htmlFile << "</div></body></html>";
+    htmlFile.close();
+
+    system("start feed.html");
+}
+
+void printHelp()
+{
+    std::wcout << L"ytfeed-cli  available commands:\n\n"
+                  "  -A, --add <id>         Add a single YouTube channel ID\n"
+                  "  -C, --channel          Show all channel (ID + name) stored in the database\n"
+                  "  -D, --delete <name>    Delete a channel by name\n"
+                  "  -F, --feed <name>      Show feeds from a single channel by name\n"
+                  "  -L, --load <file>      Load a list of YouTube channel IDs from a text file\n"
+                  "  -N, --new              Show feeds published in last 24 hours\n"
+                  "  -S, --show <number>    Limit the number of feeds printed (default: 20)\n"
+                  "  -X, --stat             Show feeds and database statistics\n"
+                  "  -W, --web              Generate a static html page with feeds selected\n"
+                  "  -H, --help             Show this help message\n\n";
+}
+
 int main(int argc, char *argv[])
 {
 
-    //_setmode(_fileno(stdout), _O_U16TEXT);
     db.createTable(CT_CHANNELS);
     db.createTable(CT_VIDEOS);
     _setmode(_fileno(stdout), _O_U16TEXT);
     std::ios_base::sync_with_stdio(false);
-    std::cin.tie(NULL);
+    std::cin.tie(nullptr);
+
     for (int i = 1; i < argc; i++)
     {
-        // --- OPZIONE -s LIMIT ---
-        if (_stricmp(argv[i], "-s") == 0)
+        // --- LIMIT -s ---
+        if (strcmp(argv[i], "-S") == 0 || strcmp(argv[i], "--show") == 0)
         {
             if (i + 1 < argc && is_number(argv[i + 1]))
             {
                 limit = atoi(argv[i + 1]);
                 i++;
             }
-
             continue;
         }
 
-        // --- OPTION -L FILENAME ---
-        if (_stricmp(argv[i], "-L") == 0)
+        // --- LOAD FILE -L ---
+        if (strcmp(argv[i], "-L") == 0 || strcmp(argv[i], "--load") == 0)
         {
             if (i + 1 >= argc)
             {
-                std::wcerr << L"Error: missing file name \n";
+                std::wcerr << L"Error: missing file name\n";
                 exit(1);
             }
 
@@ -348,106 +430,120 @@ int main(int argc, char *argv[])
                 std::wcerr << L"Error: file name not valid\n";
                 exit(1);
             }
-            else
+
+            readFile();
+
+            if (!channels.empty())
             {
-
-                readFile();
-
-                if (!channels.empty())
-                {
-                    db.beginTransaction();
-                    for (const auto &c : channels)
-                    {
-                        newchan += db.insertChannel(c);
-                    }
-                    db.commitTransaction();
-                }
+                db.beginTransaction();
+                for (const auto &c : channels)
+                    newchan += db.insertChannel(c);
+                db.commitTransaction();
             }
 
             i++;
             continue;
         }
 
-        // --- OPTION -A ---
-        if (_stricmp(argv[i], "-A") == 0)
+        // --- ADD CHANNEL -A ---
+        if (strcmp(argv[i], "-a") == 0 || strcmp(argv[i], "--add") == 0)
         {
             if (i + 1 >= argc)
             {
                 std::wcerr << L"Error: missing channel Id\n";
                 exit(1);
-            } 
+            }
 
-            std::string id_utf8 = argv[i + 1];
-            std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
-            std::wstring wid = conv.from_bytes(id_utf8);
-            //  regex
+            std::wstring wid = to_utf16(argv[i + 1]);
+
             if (!std::regex_match(wid, CHANNEL_ID_REGEX))
             {
                 std::wcerr << L"Error: channel Id not valid " << wid << L"\n";
                 exit(1);
-            } // insert DB
+            }
+
             newchan = db.insertChannel(wid);
-           
             i++;
             continue;
         }
 
-        // --- OPTION -D ---
-        if (_stricmp(argv[i], "-D") == 0)
+        // --- DELETE CHANNEL -D ---
+        if (strcmp(argv[i], "-D") == 0 || strcmp(argv[i], "--delete") == 0)
         {
             if (i + 1 >= argc)
             {
-                std::wcerr << L"Error: missing channel name \n";
+                std::wcerr << L"Error: missing channel name\n";
                 exit(1);
             }
 
-            std::string id_utf8 = argv[i + 1];
-            std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
-            std::wstring wid = conv.from_bytes(id_utf8);
+            std::wstring wid = to_utf16(argv[i + 1]);
             int del = db.removeChannel(wid);
+
             if (del == 1)
-                std::wcout << L"Channel delete: " << wid << L"\n";
+                std::wcout << L"Channel deleted: " << wid << L"\n";
             else
                 std::wcout << L"Channel not present: " << wid << L"\n";
-            i++;
-            continue;
+
+            exit(0);
         }
 
-        if (_stricmp(argv[i], "-C") == 0)
+        // --- SHOW ALL CHANNELS -C ---
+        if (strcmp(argv[i], "-C") == 0 || strcmp(argv[i], "--channels") == 0)
         {
             db.extractChannels(chns);
-          
             for (const auto &c : chns)
                 c.printChannel();
             exit(0);
         }
 
-        if(_stricmp(argv[i], "-F") == 0)
-        {   
-            std::string id_utf8 = argv[i + 1];
-            std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
-            std::wstring wid = conv.from_bytes(id_utf8);
-            int c = db.extractSingleChannel(chns, wid);
-            if (c == 0 && !chns.empty()) 
-                single = true;
-            else 
-            {
-                 std::wcout << L"Channel not present: " << wid << L"\n";
-                 exit(0);
-            }
-        }
-        if(_stricmp(argv[i], "-H") == 0)
+        // --- SHOW SINGLE CHANNEL -F ---
+        if (strcmp(argv[i], "-F") == 0 || strcmp(argv[i], "--feed") == 0)
         {
-            std::wcout <<L"ytfeed-cli  available commands:\n\n"
-                        "  -a, -A <id>       Add a single YouTube channel ID\n"
-                        "  -c, -C            Show all channel (ID + name) stored in the database\n"
-                        "  -d, -D <name>     Delete a channel by name\n"
-                        "  -f, -F <name>     Show feeds from a single channel by name\n"
-                        "  -l, -L <file>     Load a list of YouTube channel IDs from a text file\n"
-                        "  -s, -S <number>   Limit the number of feeds printed (default: 20)\n"
-                        "  -h, -H            Show this help message\n\n";
-            
+            if (i + 1 >= argc)
+            {
+                std::wcerr << L"Error: missing channel name\n";
+                exit(1);
+            }
 
+            std::wstring wid = to_utf16(argv[i + 1]);
+
+            int c = db.extractSingleChannel(chns, wid);
+
+            if (c == 0 && !chns.empty())
+                single = true;
+            else
+            {
+                std::wcout << L"Channel not present: " << wid << L"\n";
+                exit(0);
+            }
+
+        }
+
+        // --- NEW VIDEOS FLAG -n / --new ---
+        if (strcmp(argv[i], "-N") == 0 || strcmp(argv[i], "--new") == 0)
+        {
+            news = true;
+            continue;
+        }
+
+        // --- WEB MODE -W ---
+        if (strcmp(argv[i], "-W") == 0 || strcmp(argv[i], "--web") == 0)
+        {
+            web = true;
+            continue;
+        }
+
+        // --- STATISTICS ---
+        if (strcmp(argv[i], "--stat") == 0 || strcmp(argv[i], "-X") == 0)
+        {
+            db.stat();
+            exit(0);
+        }
+
+        // --- HELP -H ---
+        if (strcmp(argv[i], "-H") == 0 || strcmp(argv[i], "--help") == 0)
+        {
+            printHelp();
             exit(0);
         }
     }
@@ -460,7 +556,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (!single) 
+    //flag only 1 channel feed
+    if (!single)
         db.extractChannels(chns);
 
     videos.reserve(channels.size() * 15);
@@ -494,15 +591,29 @@ int main(int argc, char *argv[])
         videos.insert(videos.end(), chanVideos.begin(), chanVideos.end());
     }
 
+    //flag recent videos
+    if (news)
+        db.extractVideosLast24h(videos);
+
     std::sort(videos.begin(), videos.end(), [](const auto &a, const auto &b)
               { return a > b; });
 
+    //flag web page
+    if (web)
+    {
+        generateHTML(videos);
+        exit(0);
+    }
+
+
     std::wcout << L"New Video(s): " << cv << "\n";
-    if (newchan > 0) std::wcout << L"New Channel(s): " << newchan << "\n";
-    
+    if (newchan > 0)
+        std::wcout << L"New Channel(s): " << newchan << "\n";
+
     for (int i = 0; i < videos.size(); i++)
     {
-        if (i >= limit) break;
+        if (i >= limit)
+            break;
         videos[i].printVideo();
     }
 

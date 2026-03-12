@@ -55,13 +55,16 @@ Basic syntax
 ytfeed-cli [options]
  
 Option	Description
-  -a, -A <id>       Add a single YouTube channel ID
-  -c, -C            Show all channels (ID + name) stored in the database
-  -d, -D <name>     Delete a channel by name
-  -f, -F <name>     Show feeds from a single channel by name
-  -l, -L <file>     Load a list of YouTube channel IDs from a text file
-  -s, -S <number>   Limit the number of feeds printed (default: 20)
-  -h, -H            Show this help message
+  -A, --add <id>         Add a single YouTube channel ID
+  -C, --channel          Show all channels (ID + name) stored in the database
+  -D, --delete <name>    Delete a channel by name
+  -F, --feed <name>      Show feeds from a single channel by name
+  -L, --load <file>      Load a list of YouTube channel IDs from a text file
+  -N, --new              Show feeds published in last 24 hours
+  -S, --show <number>    Limit the number of feeds printed (default: 20)
+  -X, --stat             Show feeds and database statistics
+  -W, --web              Generate a static html page with last feeds
+  -H, --help             Show this help message
   
 ```
 
@@ -76,18 +79,91 @@ UCYO_jab_esuFRV4b17AJtAw
 Invalid IDs are rejected with a warning.
 
 ### 🔍 Example commands
+No one arguments, default output:
+```
+ytfeed-cli
+
+New Video(s): 225
+New Channel(s): 15
+09:00:00 12-03-2026    NPR Music                  Madi Diaz: Tiny Desk Concert                                   https://www.youtube.com/watch?v=-VwcJdXJoxs
+23:01:48 11-03-2026    Android Developers         Expanding our stage for PC and paid titles                     https://www.youtube.com/watch?v=tuXjvBXjkw8
+18:16:37 11-03-2026    Linus Tech Tips            Apple’s Co-Founder Left to Make THIS??                         https://www.youtube.com/watch?v=VxoB4vM1pUM
+14:30:26 11-03-2026    Computerphile              Vector Search with LLMs - Computerphile                        https://www.youtube.com/watch?v=YDdKiQNw80c
+14:19:12 11-03-2026    NPR Music                  #DeskOfTheDay: "Goodbye, Cowboy," Belltower                    https://www.youtube.com/watch?v=ywtpXmRwUC8   S
+23:40:30 10-03-2026    Marques Brownlee           Macbook Neo Review: Better than you Think!                     https://www.youtube.com/watch?v=iGeXGdYE7UE
+17:58:22 10-03-2026    Linus Tech Tips            We Built the ULTIMATE Gaming Firetruck                         https://www.youtube.com/watch?v=zn5lAEdv2DY
+15:01:48 10-03-2026    TED-Ed                     What happens when you break a bone? - Gurpreet Baht and Nata   https://www.youtube.com/watch?v=gVXoAbeB8QI
+15:00:01 10-03-2026    Kurzgesagt – In a Nutshel  This Is the Scariest Place in The Universe                     https://www.youtube.com/watch?v=yDAAlojz8NU
+14:09:59 10-03-2026    NPR Music                  #DeskOfTheDay: "Return to Sender," KC Shane & The Belonging    https://www.youtube.com/watch?v=Mt64jh5hGxM   S
+23:03:52 09-03-2026    Vsauce                     An Illusion You Can Hug                                        https://www.youtube.com/watch?v=_Nr4mvdkEVw   S
+```
 Load channels from file:
 ```
 ytfeed-cli -L channels.txt
 ```
 Add a single channel:
 ```
-ytfeed-cli -a UC_x5XG1OV2P6uZZ5FSM9Ttw
+ytfeed-cli -A UC_x5XG1OV2P6uZZ5FSM9Ttw
 ```
 Show the latest 10 videos:
 ```
-ytfeed-cli -s 10
+ytfeed-cli -S 10
 ```
+Show some statistics:
+```
+ytfeed-cli -X
+
+---------- YOUTUBE STATISTICS -----------
+
+Total Channels: 15
+Total Videos: 225
+Total Videos Shorts: 72
+Recent Videos (last 24 hours): 5
+Average gap between videos: 115.702 hours
+
+----------- ACTIVITY LAST 7 DAYS (39 Videos) -------------------------             ---------------- TOP CHANNELS -------------------
+
+2026-03-12 | # (1)                                                                 NPR Music                 | ########### (11)
+2026-03-11 | #### (4)                                                              Linus Tech Tips           | ####### (7)
+2026-03-10 | ##### (5)                                                             Kurzgesagt – In a Nutshell | #### (4)
+2026-03-09 | ############## (14)                                                   Android Developers        | #### (4)
+2026-03-08 | ## (2)                                                                thenewboston              | ### (3)
+2026-03-07 | ### (3)                                                               Marques Brownlee          | ### (3)
+2026-03-06 | ##### (5)                                                             TED-Ed                    | ## (2)
+2026-03-05 | ####### (7)                                                           Computerphile             | ## (2)
+2026-03-04 | #### (4)                                                              Vsauce                    | # (1)
+2026-03-03 | ##### (5)                                                             Veritasium                | # (1)
+
+----------- ACTIVITY LAST 2 MONTHS Weekly (129 Videos) ----------------            ---------------- TOP CHANNELS -------------------
+
+2026-03-09 - 2026-03-15 | ##### (10)                                               TED-Ed                    | ############### (15)
+2026-03-02 - 2026-03-08 | #################### (40)                                NPR Music                 | ############### (15)
+2026-02-23 - 2026-03-01 | ######### (19)                                           Marques Brownlee          | ############### (15)
+2026-02-16 - 2026-02-22 | ######## (16)                                            Linus Tech Tips           | ############### (15)
+2026-02-09 - 2026-02-15 | ##### (11)                                               Kurzgesagt – In a Nutshell | ############### (15)
+2026-02-02 - 2026-02-08 | #### (9)                                                 Android Developers        | ############### (15)
+2026-01-26 - 2026-02-01 | #### (9)                                                 Veritasium                | ############ (12)
+2026-01-19 - 2026-01-25 | #### (8)                                                 Fireship                  | ########## (10)
+2026-01-12 - 2026-01-18 | ### (7)                                                  Computerphile             | ######## (8)
+
+-------------------------------------------------------------- NEWEST AND OLDEST VIDEOS --------------------------------------------------------------
+
+09:00:00 12-03-2026    NPR Music                  Madi Diaz: Tiny Desk Concert                                   https://www.youtube.com/watch?v=-VwcJdXJoxs
+12:45:11 28-03-2023    CGP Grey                   How a Video Game Gave Antarctica Its Flag                      https://www.youtube.com/watch?v=U0wTDK0VOeY
+
+----------- DATABASE STATISTICS ----------------
+
+Database size: 68 kb
+Schema version 2
+Integrity: ok
+Freelist pages: 0
+Journal mode: wal
+Synchronous mode: 1
+Foreign Keys: 1
+Total table :2
+```
+
+Show 
 🧠 How it works (internal pipeline)
 
 - Parse arguments  
@@ -113,13 +189,13 @@ ytfeed-cli -s 10
 | Name   | TEXT    | Channel name       | (fetched from feed)
 
  Videos Table
-| Column    | Type    |  Description         |
-|-----------|---------|----------------------|
-| Id        | TEXT PK | YouTube Video Id     |  
-| Title     | TEXT    | Video title          | 
-| Author    | TEXT    | Channel name         | FK REFERENCES Channels(Id)
-| Short     | INTEGER | Short(1) not(0) Video|
-| Timestamp | INTEGER | Unix timestamp       |
+| Column    | Type    |  Description             |
+|-----------|---------|------------------------- |
+| Id        | TEXT PK | YouTube Video Id         |  
+| Title     | TEXT    | Video title              | 
+| Author    | TEXT    | Channel name             | FK REFERENCES Channels(Name)
+| Short     | INTEGER | Short Video (1) or not(0)|
+| Timestamp | INTEGER | Unix timestamp           |
 
 
 ```
