@@ -152,11 +152,11 @@ void readFile()
         return;
     }
     std::string line;
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
+    
     // Regex ID channel YouTube
     // std::wregex re(L"^UC[A-Za-z0-9_-]{22}$");
     while (std::getline(file, line))
-    { // Rimuovi BOM UTF-8 se presente
+    { 
         if (line.size() >= 3 && (unsigned char)line[0] == 0xEF && (unsigned char)line[1] == 0xBB && (unsigned char)line[2] == 0xBF)
         {
             line = line.substr(3);
@@ -170,23 +170,20 @@ void readFile()
             continue;
 
         // conversion and check regex
-        std::wstring wline = conv.from_bytes(line);
+        std::wstring wline = to_utf16(line);
+
         if (std::regex_match(wline, CHANNEL_ID_REGEX))
-        {
             channels.push_back(std::move(wline));
-        }
         else
-        {
             std::wcerr << L"Error: not valid id " << wline << L"\n";
-        }
+        
     }
 }
 
 void parseXML(const wchar_t *wbuffer, Channel &channel)
 {
     IXMLDOMDocument2 *pXMLDoc = nullptr;
-    hr = CoCreateInstance(__uuidof(DOMDocument60), NULL, CLSCTX_INPROC_SERVER,
-                          IID_PPV_ARGS(&pXMLDoc));
+    hr = CoCreateInstance(__uuidof(DOMDocument60), NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pXMLDoc));
 
     if (FAILED(hr) || !pXMLDoc)
     {
@@ -446,7 +443,7 @@ int main(int argc, char *argv[])
         }
 
         // --- ADD CHANNEL -A ---
-        if (strcmp(argv[i], "-a") == 0 || strcmp(argv[i], "--add") == 0)
+        if (strcmp(argv[i], "-A") == 0 || strcmp(argv[i], "--add") == 0)
         {
             if (i + 1 >= argc)
             {
@@ -605,18 +602,21 @@ int main(int argc, char *argv[])
         exit(0);
     }
 
-
+    std::wcout << L"\n---------------------------------------------------------------- YOUTUBE FEED UPDATE -------------------------------------------------------------------\n";
     std::wcout << L"New Video(s): " << cv << "\n";
     if (newchan > 0)
         std::wcout << L"New Channel(s): " << newchan << "\n";
-
+    std::wcout <<"\n";
     for (int i = 0; i < videos.size(); i++)
     {
         if (i >= limit)
             break;
         videos[i].printVideo();
     }
+    std::wcout <<"\n";
 
+
+    std::wcout << L"largh: "<< width;
     _setmode(_fileno(stdout), _O_TEXT);
 
     WinHttpCloseHandle(hSession);

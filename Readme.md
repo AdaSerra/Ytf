@@ -82,6 +82,7 @@ Invalid IDs are rejected with a warning.
 No one arguments, default output:
 ```
 ytfeed-cli
+---------------------------------------------------------------- YOUTUBE FEED UPDATE-------------------------------------------------------------
 
 New Video(s): 225
 New Channel(s): 15
@@ -121,7 +122,7 @@ Total Videos Shorts: 72
 Recent Videos (last 24 hours): 5
 Average gap between videos: 115.702 hours
 
------------ ACTIVITY LAST 7 DAYS (39 Videos) -------------------------             ---------------- TOP CHANNELS -------------------
+----------- ACTIVITY LAST 10 DAYS (39 Videos) -------------------------             ---------------- TOP CHANNELS -------------------
 
 2026-03-12 | # (1)                                                                 NPR Music                 | ########### (11)
 2026-03-11 | #### (4)                                                              Linus Tech Tips           | ####### (7)

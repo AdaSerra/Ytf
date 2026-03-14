@@ -369,7 +369,7 @@ public:
         rc = sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, nullptr);
         if (rc != SQLITE_OK)
         {
-            std::wcerr << L"Errore prepare (loadVideosAndTrim): "
+            std::wcerr << L"Error prepare (loadVideosAndTrim): "
                        << reinterpret_cast<const wchar_t *>(sqlite3_errmsg16(db))
                        << std::endl;
             return;
@@ -486,7 +486,7 @@ public:
         rc = sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, nullptr);
         if (rc != SQLITE_OK)
         {
-            std::wcerr << L"Errore prepare (UPSERT): "
+            std::wcerr << L"Error prepare (UPSERT): "
                        << reinterpret_cast<const wchar_t *>(sqlite3_errmsg16(db))
                        << std::endl;
             return 0;
@@ -502,7 +502,7 @@ public:
         rc = sqlite3_step(stmt);
         if (rc != SQLITE_DONE)
         {
-            std::wcerr << L"Errore UPSERT: "
+            std::wcerr << L"Error UPSERT: "
                        << reinterpret_cast<const wchar_t *>(sqlite3_errmsg16(db))
                        << std::endl;
             sqlite3_finalize(stmt);
@@ -523,7 +523,7 @@ public:
         rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
         if (rc != SQLITE_OK)
         {
-            std::wcerr << L"Errore prepare (loadVideosAndTrim): "
+            std::wcerr << L"Error prepare (loadVideosAndTrim): "
                        << reinterpret_cast<const wchar_t *>(sqlite3_errmsg16(db))
                        << std::endl;
             return;
@@ -632,7 +632,7 @@ public:
         std::vector<std::pair<std::wstring, int>> lastWeek;
         std::vector<std::pair<std::wstring, int>> lastWeekC;
 
-        getCountPair("SELECT strftime('%Y-%m-%d', Timestamp, 'unixepoch'), COUNT(*) "
+        getCountPair("SELECT strftime('%d-%m-%Y', Timestamp, 'unixepoch'), COUNT(*) "
                      "FROM Videos "
                      "WHERE Timestamp >= strftime('%s','now') - 864000 "
                      "GROUP BY 1 ORDER BY 1 DESC LIMIT 10;",
@@ -643,7 +643,7 @@ public:
             "GROUP BY Author ORDER BY COUNT(*) DESC LIMIT 10;",
             lastWeekC);
 
-        std::wcout << L"\n----------- ACTIVITY LAST 7 DAYS (" << last7d << std::left <<std::setw(47) <<L" Videos) ------------------------- " 
+        std::wcout << L"\n----------- ACTIVITY LAST 10 DAYS (" << last7d << std::left <<std::setw(47) <<L" Videos) ------------------------- " 
                     << L"---------------- TOP CHANNELS ------------------- \n\n";
         for (int i = 0; i < lastWeek.size(); i++)
         {
@@ -656,8 +656,8 @@ public:
         }
 
         getCountPair(
-            "SELECT date(Timestamp, 'unixepoch', 'weekday 1', '-7 days') || ' - ' || "
-            "date(Timestamp, 'unixepoch', 'weekday 1', '-1 day') AS WeekRange, "
+            "SELECT strftime('%d-%m-%Y', Timestamp, 'unixepoch', 'weekday 1', '-7 days') || ' - ' || "
+            "strftime('%d-%m-%Y', Timestamp, 'unixepoch', 'weekday 1', '-1 day') AS WeekRange, "
             " COUNT(*)"
             "FROM Videos "
             "WHERE Timestamp >= strftime('%s','now','-56 days') "
@@ -683,7 +683,7 @@ public:
                 std::wcout << std::setw(25) << lastWeekC[i].first << L" | " << bar2 << L" (" << lastWeekC[i].second << ")\n";
         }
 
-        std::wcout << L"\n-------------------------------------------------------------- NEWEST AND OLDEST VIDEOS --------------------------------------------------------------\n\n";
+        std::wcout << L"\n-------------------------------------------------------------- NEWEST AND OLDEST VIDEOS -----------------------------------------------------------------\n\n";
         v2.printVideo();
         v1.printVideo();
 
