@@ -26,8 +26,10 @@
 
 inline const std::wregex CHANNEL_ID_REGEX(L"^UC[A-Za-z0-9_-]{22}$");
 constexpr wchar_t YOUTUBE_HOST[] = L"www.youtube.com";
-constexpr uint32_t DEFAULT_LIMIT = 20;
-uint32_t limit = DEFAULT_LIMIT;
+constexpr uint32_t DEFAULT_LIMIT_CONSOLE = 20;
+constexpr uint32_t DEFAULT_LIMIT_FEED = 30;
+uint32_t limit = DEFAULT_LIMIT_CONSOLE;
+uint32_t keep = DEFAULT_LIMIT_FEED;
 char *filename = nullptr;
 int newchan = 0;
 std::vector<std::wstring> channels;
@@ -36,30 +38,36 @@ HRESULT hr = S_OK;
 bool single = false;
 bool web = false;
 bool news = false;
+bool quiet = false;
 Sqlite db(L"local.db");
 std::vector<Video> videos;
 
 size_t cv = 0;
 
-int is_number(const char *str)
+bool parse_int(const char *str, int &out)
 {
-    if (*str == '\0')
-        return 0;
+    if (str == nullptr || *str == '\0')
+        return false;
 
-    if (*str == '-' || *str == '+')
-    {
-        str++;
-        if (*str == '\0')
-            return 0;
-    }
+    char *end = nullptr;
+    errno = 0;
 
-    while (*str)
-    {
-        if (!isdigit(*str))
-            return 0;
-        str++;
-    }
-    return 1;
+    long val = strtol(str, &end, 10);
+
+    if (end == str) // no number
+        return false;
+
+    if (*end != '\0') // extra char
+        return false;
+
+    if (errno == ERANGE) // overflow/underflow
+        return false;
+
+    if (val < INT_MIN || val > INT_MAX)
+        return false;
+
+    out = static_cast<int>(val);
+    return true;
 }
 
 bool isValidFilename(const char *filename)
@@ -152,11 +160,11 @@ void readFile()
         return;
     }
     std::string line;
-    
+
     // Regex ID channel YouTube
     // std::wregex re(L"^UC[A-Za-z0-9_-]{22}$");
     while (std::getline(file, line))
-    { 
+    {
         if (line.size() >= 3 && (unsigned char)line[0] == 0xEF && (unsigned char)line[1] == 0xBB && (unsigned char)line[2] == 0xBF)
         {
             line = line.substr(3);
@@ -176,7 +184,6 @@ void readFile()
             channels.push_back(std::move(wline));
         else
             std::wcerr << L"Error: not valid id " << wline << L"\n";
-        
     }
 }
 
@@ -378,11 +385,13 @@ void printHelp()
 {
     std::wcout << L"ytfeed-cli  available commands:\n\n"
                   "  -A, --add <id>         Add a single YouTube channel ID\n"
-                  "  -C, --channel          Show all channel (ID + name) stored in the database\n"
+                  "  -C, --channel          Show all channels (ID + name) stored in the database\n"
                   "  -D, --delete <name>    Delete a channel by name\n"
                   "  -F, --feed <name>      Show feeds from a single channel by name\n"
+                  "  -K, --keep <number>    Max videos saved per author in database from most recent (min: 30)\n"
                   "  -L, --load <file>      Load a list of YouTube channel IDs from a text file\n"
                   "  -N, --new              Show feeds published in last 24 hours\n"
+                  "  -Q, --quiet            Run without network access, list only videos in database\n"
                   "  -S, --show <number>    Limit the number of feeds printed (default: 20)\n"
                   "  -X, --stat             Show feeds and database statistics\n"
                   "  -W, --web              Generate a static html page with feeds selected\n"
@@ -400,17 +409,31 @@ int main(int argc, char *argv[])
 
     for (int i = 1; i < argc; i++)
     {
-        // --- LIMIT -s ---
+        // --- LIMIT VIDEO SHOW IN CONSOLE -s ---
         if (strcmp(argv[i], "-S") == 0 || strcmp(argv[i], "--show") == 0)
         {
-            if (i + 1 < argc && is_number(argv[i + 1]))
+            int tmp;
+            if (parse_int(argv[i + 1], tmp))
             {
-                limit = atoi(argv[i + 1]);
+                limit = tmp;
                 i++;
             }
             continue;
         }
-
+        // --- LIMIT VIDEO SAVED IN DB ---
+        if (strcmp(argv[i], "-K") == 0 || strcmp(argv[i], "--keep") == 0)
+        {
+            if (i + 1 < argc)
+            {
+                int tmp;
+                if (parse_int(argv[i + 1], tmp))
+                {
+                    keep = tmp < DEFAULT_LIMIT_FEED ? DEFAULT_LIMIT_FEED : tmp;
+                    i++;
+                }
+            }
+            continue;
+        }
         // --- LOAD FILE -L ---
         if (strcmp(argv[i], "-L") == 0 || strcmp(argv[i], "--load") == 0)
         {
@@ -513,7 +536,6 @@ int main(int argc, char *argv[])
                 std::wcout << L"Channel not present: " << wid << L"\n";
                 exit(0);
             }
-
         }
 
         // --- NEW VIDEOS FLAG -n / --new ---
@@ -522,7 +544,12 @@ int main(int argc, char *argv[])
             news = true;
             continue;
         }
-
+        // ---QUIET FLAG -n / --new ---
+        if (strcmp(argv[i], "-Q") == 0 || strcmp(argv[i], "--quiet") == 0)
+        {
+            quiet = true;
+            continue;
+        }
         // --- WEB MODE -W ---
         if (strcmp(argv[i], "-W") == 0 || strcmp(argv[i], "--web") == 0)
         {
@@ -545,83 +572,80 @@ int main(int argc, char *argv[])
         }
     }
 
-    hr = CoInitialize(NULL);
-    if (FAILED(hr))
-
-    {
-        std::wcerr << L"Error: CoInitialize failed \n";
-        return 1;
-    }
-
-    //flag only 1 channel feed
+    // flag only 1 channel feed
     if (!single)
         db.extractChannels(chns);
 
     videos.reserve(channels.size() * 15);
 
-    HINTERNET hSession = WinHttpOpen(L"WinHTTP Example/1.0",
-                                     WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
-                                     WINHTTP_NO_PROXY_NAME,
-                                     WINHTTP_NO_PROXY_BYPASS, 0);
-
-    HINTERNET hConnect = WinHttpConnect(hSession, YOUTUBE_HOST,
-                                        INTERNET_DEFAULT_HTTPS_PORT, 0);
-
-    for (auto &ch : chns)
+    // flag quiet/http request
+    if (!quiet)
     {
-        wchar_t completeUrl[512];
-        swprintf(completeUrl, 512, L"/feeds/videos.xml?channel_id=%s", ch.id.c_str());
+        hr = CoInitialize(NULL);
+        if (FAILED(hr))
+        {
+            std::wcerr << L"Error: CoInitialize failed\n";
+            return 1;
+        }
+        HINTERNET hSession = WinHttpOpen(L"WinHTTP User Agent/1.0",
+                                         WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+                                         WINHTTP_NO_PROXY_NAME,
+                                         WINHTTP_NO_PROXY_BYPASS, 0);
 
-        getFeed(hSession, hConnect, completeUrl, ch);
+        HINTERNET hConnect = WinHttpConnect(hSession, YOUTUBE_HOST,
+                                            INTERNET_DEFAULT_HTTPS_PORT, 0);
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(80));
+        for (auto &ch : chns)
+        {
+            wchar_t completeUrl[512];
+            swprintf(completeUrl, 512, L"/feeds/videos.xml?channel_id=%s", ch.id.c_str());
+            getFeed(hSession, hConnect, completeUrl, ch);
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(80));
+        }
+
+        cv = db.insertVideosBatch(videos);
+        videos.clear();
+
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+        CoUninitialize(); 
     }
-
-    cv = db.insertVideosBatch(videos);
-
-    videos.clear();
 
     for (const auto &ch : chns)
     {
         std::vector<Video> chanVideos;
-        db.loadVideosAndTrim(chanVideos, ch.name);
+        db.loadVideosAndTrim(chanVideos, ch.name, keep);
         videos.insert(videos.end(), chanVideos.begin(), chanVideos.end());
     }
 
-    //flag recent videos
+    // flag recent videos
     if (news)
         db.extractVideosLast24h(videos);
 
     std::sort(videos.begin(), videos.end(), [](const auto &a, const auto &b)
               { return a > b; });
 
-    //flag web page
+    // flag web page
     if (web)
     {
         generateHTML(videos);
         exit(0);
     }
 
-    std::wcout << L"\n---------------------------------------------------------------- YOUTUBE FEED UPDATE -------------------------------------------------------------------\n";
+    std::wcout << L"\n----------------------------------------------------------------- YOUTUBE FEED UPDATE ---------------------------------------------------------------------\n\n";
     std::wcout << L"New Video(s): " << cv << "\n";
     if (newchan > 0)
         std::wcout << L"New Channel(s): " << newchan << "\n";
-    std::wcout <<"\n";
     for (int i = 0; i < videos.size(); i++)
     {
         if (i >= limit)
             break;
         videos[i].printVideo();
     }
-    std::wcout <<"\n";
+    std::wcout << "\n";
 
-
-    std::wcout << L"largh: "<< width;
     _setmode(_fileno(stdout), _O_TEXT);
-
-    WinHttpCloseHandle(hSession);
-    WinHttpCloseHandle(hConnect);
-    CoUninitialize();
 
     return 0;
 }

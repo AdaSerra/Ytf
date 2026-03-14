@@ -7,4 +7,5 @@ sqll.cpp
 *.html
 *.bin
 index.txt
+/junk
 

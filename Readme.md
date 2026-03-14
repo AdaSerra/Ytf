@@ -59,8 +59,10 @@ Option	Description
   -C, --channel          Show all channels (ID + name) stored in the database
   -D, --delete <name>    Delete a channel by name
   -F, --feed <name>      Show feeds from a single channel by name
+  -K, --keep <number>    Max videos saved per author in database from most recent (min: 30)
   -L, --load <file>      Load a list of YouTube channel IDs from a text file
   -N, --new              Show feeds published in last 24 hours
+  -Q, --quiet             Run without network access; list only videos stored in the database
   -S, --show <number>    Limit the number of feeds printed (default: 20)
   -X, --stat             Show feeds and database statistics
   -W, --web              Generate a static html page with last feeds
@@ -168,18 +170,18 @@ Show
 🧠 How it works (internal pipeline)
 
 - Parse arguments  
-- Validate filenames, numeric limits, and channel IDs.
-- Load channels from file (-L) or single ID (-a).
+- Validate filenames, numeric limits, and channel IDs
+- Load channels from file (-L) or single ID (-a)
 - Fetch RSS feeds  
-- Using WinHTTP with a lightweight user agent.
+- Using WinHTTP with a lightweight user agent
 - Parse XML  
 - Extract: channel name, video title, video ID, publication timestamp
 - Insert into SQLite  
   Using prepared statements and batch transactions.
 - Trim old videos  
-  Keep only the latest 30 per channel.
+  Keep only the at least latest 30 per channel
 - Sort and display  
-  Videos are sorted by timestamp (newest first).
+  Videos are sorted by timestamp (newest first)
 
 🧩 Database schema
 ```

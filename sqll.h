@@ -355,7 +355,7 @@ public:
         return;
     }
 
-    void loadVideosAndTrim(std::vector<Video> &vec, const std::wstring &author)
+    void loadVideosAndTrim(std::vector<Video> &vec, const std::wstring &author, uint32_t limit)
     {
 
         vec.clear();
@@ -398,17 +398,24 @@ public:
 
         sqlite3_finalize(stmt);
 
-        // --- 3) DELETE OVER 30 VIDEOS ---
-        if (vec.size() > 30)
+        // --- 3) DELETE OVER limit VIDEOS ---
+        if (vec.size() > limit)
         {
             query =
                 "DELETE FROM Videos "
                 "WHERE Author = ? AND Timestamp < ?;";
 
             sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, nullptr);
+             if (rc != SQLITE_OK)
+        {
+            std::wcerr << L"Error prepare (delete): "
+                       << reinterpret_cast<const wchar_t*>(sqlite3_errmsg16(db))
+                       << std::endl;
+            return;
+        }
 
-            // Timestamp limit =  30th recent video
-            time_t cutoff = vec[29].tp;
+            // Timestamp limit  (30th) recent video
+            time_t cutoff = vec[limit-1].tp;
 
             sqlite3_bind_text16(stmt, 1, author.c_str(), -1, SQLITE_TRANSIENT);
             sqlite3_bind_int64(stmt, 2, cutoff);
@@ -416,8 +423,8 @@ public:
             sqlite3_step(stmt);
             sqlite3_finalize(stmt);
 
-            // only 30
-            vec.resize(30);
+            // only limit size
+            vec.resize(limit);
         }
 
         return;
