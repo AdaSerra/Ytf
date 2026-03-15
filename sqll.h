@@ -427,10 +427,9 @@ public:
         sqlite3_finalize(stmt);
 
         // --- 2) TRIMMING ---
-        if (vec.size() > (size_t)limit)
+        if (vec.size() >limit)
         {
-              beginTransaction();
-
+            beginTransaction();
             query = "DELETE FROM Videos WHERE Author = ? AND Timestamp < ?;";
        
             rc = sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, nullptr);
@@ -601,7 +600,7 @@ public:
 
         if (sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, nullptr) != SQLITE_OK)
         {
-            handleError(L"Error prepare getVideoBoundaries: ")
+            handleError(L"Error prepare getVideoBoundaries: ");
             return;
         }
 
