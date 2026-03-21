@@ -11,15 +11,12 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
-#define CURL_STATICLIB
 #include <curl/curl.h>
 #include "const.h"
 #include "console.h"
 #include "sqll.h"
 #include "types.h"
 #include "util.h"
-
-
 
 #pragma comment(lib, "libcurl.lib")
 
@@ -153,7 +150,7 @@ int main(int argc, char *argv[])
             {
                 int tmp;
                 if (parse_int(argv[++i], tmp))
-                { // ++i consuma il valore
+                { 
                     indexVideo = (tmp >= 0) ? (size_t)tmp : 0;
                     singleVideo = true;
                 }

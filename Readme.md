@@ -1,9 +1,10 @@
 ## Ytf
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Platform](https://img.shields.io/badge/platform-Windows-0078D6.svg) ![Language](https://img.shields.io/badge/language-C%2B%2B20-00599C.svg) ![SQLite](https://img.shields.io/badge/SQLite-embedded-003B57.svg) ![curl](https://img.shields.io/badge/cURL-required-073551.svg) ![utf8proc](https://img.shields.io/badge/Unicode-utf8proc-6A5ACD.svg)
+![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Language](https://img.shields.io/badge/language-C%2B%2B20-00599C.svg) ![SQLite](https://img.shields.io/badge/SQLite-embedded-003B57.svg) ![curl](https://img.shields.io/badge/cURL-required-073551.svg) ![utf8proc](https://img.shields.io/badge/Unicode-utf8proc-6A5ACD.svg)
 
 
 ![logo](logo3.png "Ytf")
+
 A fast, lightweight YouTube RSS fetcher and SQLite indexer.
 
 ### 📌 Overview

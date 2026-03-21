@@ -4,10 +4,6 @@
 #include <string>
 #include <ctime>
 
-/* #include "const.h"
-#include "console.h"
-#include "util.h" */
-
 enum Field : uint8_t
 {
     TIMESTAMP = 0,
