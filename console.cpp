@@ -11,6 +11,58 @@
 
 #include "const.h"
 
+static const char *LOGO[] = {
+    "\n",
+    "     \"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\n",
+    "   111111111111111111111111111111111111111111111111111111111111111111111111111111\n",
+    "  11111111111111111111111111111111111111111111111111111111111111111111111111111111\n",
+    "  111111111111111111I    :;;111111111111111111111111111111111111111111111111111111\n",
+    "  1111111111111111                   111111111111111111111111111111111111111111111\n",
+    "  111111111111111                         ?111111111111111111111111111111111111111\n",
+    "  111111111111111                             -11111111111111111111111111111111111\n",
+    "  1111111111111111                               `11111111111111111111111111111111\n",
+    "  111111111111111111                                \"11111111111111111111111111111\n",
+    "  1111111111111111111111111111111:                     111111111111111111111111111\n",
+    "  1111111111111111111111111111111111111                  -111111111111111111111111\n",
+    "  1111111111111111111111111111111111111111[                l1111111111111111111111\n",
+    "  11111111111111111111111111111111111111111111               {11111111111111111111\n",
+    "  1111111111111111111111111111111111111111111111?              1111111111111111111\n",
+    "  111111111111111111!     ??11111111111111111111111             <11111111111111111\n",
+    "  1111111111111111                1111111111111111111             1111111111111111\n",
+    "  111111111111111                     11111111111111111            111111111111111\n",
+    "  111111111111111                        111111111111111,           l1111111111111\n",
+    "  1111111111111111                          11111111111111           ^111111111111\n",
+    "  111111111111111111'                         1111111111111           I11111111111\n",
+    "  1111111111111111111111111111~                '111111111111:          -1111111111\n",
+    "  11111111111111111111111111111111l              111111111111.          1111111111\n",
+    "  11111111111111111111111111111111111             l11111111111           111111111\n",
+    "  1111111111111111111111111111111111111.            11111111111           11111111\n",
+    "  111111111111111111111111111111111111111            11111111111          {1111111\n",
+    "  11111111111111111^    '\"1111111111111111:           11111111111          1111111\n",
+    "  111111111111'               11111111111111          l1111111111          }111111\n",
+    "  1111111111                    }11111111111?          1111111111{          111111\n",
+    "  11111111                        11111111111`         ^1111111111          111111\n",
+    "  1111111                          11111111111          1111111111~         111111\n",
+    "  111111                            1111111111\"         i1111111111         '11111\n",
+    "  111111          |#######          }1111111111          1111111111         '11111\n",
+    "  11111`         ##########          1111111111          1111111111          11111\n",
+    "  11111          ##########          1111111111          1111111111          11111\n",
+    "  11111`         U#########          1111111111         i1111111111:        [11111\n",
+    "  111111          ?######|          }11111111111[      11111111111111      1111111\n",
+    "  111111                            1111111111111111111111111111111111111111111111\n",
+    "  1111111                          11111111111111111111111111111111111111111111111\n",
+    "  11111111;                       111111111111111111111111111111111111111111111111\n",
+    "  1111111111                    11111111111111111111111111111111111111111111111111\n",
+    "  111111111111+              >1111111111111111111111111111111111111111111111111111\n",
+    "  11111111111111111:    :111111111111111111111111111111111111111111111111111111111\n",
+    "  11111111111111111111111111111111111111111111111111111111111111111111111111111111\n",
+    "   111111111111111111111111111111111111111111111111111111111111111111111111111111\n",
+    "      ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::\n\n",
+
+};
+
+static size_t LOGO_LEN = std::size(LOGO);
+
 void responsiveConsole(const std::string &ws, int wc)
 {
 
@@ -25,43 +77,42 @@ void responsiveConsole(const std::string &ws, int wc)
 void printHelp()
 {
     std::cout << "  ytf available commands:\n\n"
-             "  -a, --add <id>          Add a single YouTube channel ID\n"
-             "  -l, --list              Show all channels (ID + name) stored in the database\n"
-             "  -r, --remove <name>     Delete a channel by name\n"
-             "  -e, --ext               Show extended feeds info\n"
-             "  -f, --feed <name>       Show feeds from a single channel by name\n"
-             "  -i, --index <number>    Show only url at selected index\n"
-             "  -j, --json              Print output in json format\n"
-             "  -k, --keep <number>     Max videos saved per author in database (min: 30)\n"
-             "  -L, --load <file>       Load a list of YouTube channel IDs from a text file\n"
-             "  -n, --new               Show feeds published in last 24 hours\n"
-             "  -o, --order <s> [d]     Sort by 'd'ate, 'a'uthor, 't'itle, 's'tars, 'v'iews\n"
-             "                          Direction 'up'/'down'. Defaults: a,t (up), others (down)\n"
-             "  -q, --quiet             Offline mode: list only videos in database\n"
-             "  -p, --purge             Remove incomplete entries and vacuum database\n"
-             "  -s, --limit <number>    Limit the number of feeds printed (default: 20)\n"
-             "  -t, --time <f> [<date>] Date filter: 'e'qual (whole day), 'a'fter, 'b'efore, 'r'ange (requires two date)\n"
-             "                          Date format DD-MM-YYYY\n"
-             "  -V, --video-only        Hide short videos (show only long-form)\n"
-             "  -S, --short-only        Hide long videos (show only shorts)\n"
-             "  -x, --stat              Show feeds and database statistics\n"
-             "  -w, --web               Generate a static HTML page with selected feeds\n"
-             "  -b, --about             Print credits\n"
-             "  -v, --version           Show version\n"
-             "  -h, --help              Show this help message\n\n";
-    
+                 "  -a, --add <id>          Add a single YouTube channel ID\n"
+                 "  -l, --list              Show all channels (ID + name) stored in the database\n"
+                 "  -r, --remove <name>     Delete a channel by name\n"
+                 "  -e, --ext               Show extended feeds info\n"
+                 "  -f, --feed <name>       Show feeds from a single channel by name\n"
+                 "  -i, --index <number>    Show only url at selected index\n"
+                 "  -j, --json              Print output in json format\n"
+                 "  -k, --keep <number>     Max videos saved per author in database (min: 30)\n"
+                 "  -L, --load <file>       Load a list of YouTube channel IDs from a text file\n"
+                 "  -n, --new               Show feeds published in last 24 hours\n"
+                 "  -o, --order <s> [d]     Sort by 'd'ate, 'a'uthor, 't'itle, 's'tars, 'v'iews\n"
+                 "                          Direction 'up'/'down'. Defaults: a,t (up), others (down)\n"
+                 "  -q, --quiet             Offline mode: list only videos in database\n"
+                 "  -p, --purge             Remove incomplete entries and vacuum database\n"
+                 "  -s, --limit <number>    Limit the number of feeds printed (default: 20)\n"
+                 "  -t, --time <f> [<date>] Date filter: 'e'qual (whole day), 'a'fter, 'b'efore, 'r'ange (requires two date)\n"
+                 "                          Date format DD-MM-YYYY\n"
+                 "  -V, --video-only        Hide short videos (show only long-form)\n"
+                 "  -S, --short-only        Hide long videos (show only shorts)\n"
+                 "  -x, --stat              Show feeds and database statistics\n"
+                 "  -w, --web               Generate a static HTML page with selected feeds\n"
+                 "  -b, --about             Print credits\n"
+                 "  -v, --version           Show version\n"
+                 "  -h, --help              Show this help message\n\n";
 }
 
 void printLogo()
 {
 
-    
     const char *RED = "\033[1;31m";
     const char *YEL = "\033[1;33m";
     const char *GRY = "\033[90m";
     const char *RST = "\033[0m"; // reset
 
     std::string buffer;
+
     size_t estimatedSize = 0;
     for (size_t i = 0; i < LOGO_LEN; i++)
         estimatedSize += strlen(LOGO[i]) * 10;
@@ -95,13 +146,15 @@ void printLogo()
     }
     buffer += RST;
     std::cout << buffer;
+
     std::cout << "\nYtf - A cli feed reader for YouTube\n"
-              "----------------------------------------------------\n"
-              "Version               1.0.0\n"
-              "Build date            2026-03-21\n"
-              "Author                Adalberto Serra\n"
-              "GitHub                https://github.com/AdaSerra/Ytf\n"
-              "License               MIT\n";
+                 "----------------------------------------------------\n"
+                 "Version               "
+              << YTFVERSION << "\n"
+                               "Build date            2026-03-22\n"
+                               "Author                Adalberto Serra\n"
+                               "GitHub                https://github.com/AdaSerra/Ytf\n"
+                               "License               MIT\n";
 }
 
 int getConsoleWidth()

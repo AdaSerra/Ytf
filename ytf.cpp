@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
         //  --- Version
         if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--version") == 0)
         {
-            std::cout << VERS;
+            std::cout << YTFVERSION;
             return 0;
         }
         //  --- about

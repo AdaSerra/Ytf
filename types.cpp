@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <string>
 #include <ctime>
+#include "const.h"
 #include "types.h"
 #include "console.h"
 
@@ -100,7 +101,7 @@ void Video::printVideo(bool ext, int idx)
         std::cout << "       ";
     }
 
-    std::cout << " https://youtu.be/" << id;
+    std::cout <<" "<< YTURL_SHORT << id;
 
     if (ext && sh)
         std::cout << "  S";
@@ -152,9 +153,10 @@ void Video::jsonVideo()
               << "\"published\":\"" << timeStr << "\","
               << "\"author\":\""    << author << "\","
               << "\"title\":\""     << title << "\","
-              << "\"views\":"       << views << "," // I numeri non hanno bisogno di virgolette
+              << "\"views\":"       << views << "," 
               << "\"stars\":"       << stars << ","
-              << "\"url\":\""       << "https://youtu.be/" << id << "\""
+              << "\"isShort\":"     << (sh ? "true": "false") <<","
+              << "\"url\":\""       << YTURL_SHORT << id << "\""
               << "}";
 }
 
