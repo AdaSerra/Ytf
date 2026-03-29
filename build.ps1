@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
 
-$srcCpp = @("ytf.cpp", "sqll.cpp", "types.cpp","util.cpp", "console.cpp")
+$srcCpp = @("./src/ytf.cpp", "./src/sqll.cpp", "./src/types.cpp","./src/util.cpp", "./src/console.cpp")
 $srcC   = @("./dep/sqlite3.c", "./dep/utf8proc.c")
 $includes = "./include"
 #$libs = "./lib"

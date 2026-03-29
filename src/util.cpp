@@ -91,16 +91,16 @@ char *extract_xml_attr(const char *src, const char *tag, const char *attr,
     return const_cast<char *>(close + close_len);
 }
 
-void parsingXml(std::string &response, std::vector<Video> &vec, Channel &ch, Sqlite &db)
+void parsingXml(std::vector<Video> &vec, Channel &ch, Sqlite &db)
 {
-    if (response.empty())
+    if (ch.resXml.empty())
         return;
 
     std::vector<char> out_vec(ENTRY_BUFFER_SIZE);
     char *out = out_vec.data();
 
     char sub[1024];
-    const char *na = response.c_str();
+    const char *na = ch.resXml.c_str();
 
     if (ch.name.empty())
     {

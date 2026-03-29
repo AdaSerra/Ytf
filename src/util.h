@@ -13,7 +13,7 @@ struct Video;
 char *extract_xml_tag(const char *src, const char *tag, char *out, size_t out_size);
 char *extract_xml_attr(const char *src, const char *tag, const char *attr,
                        char *out, size_t out_size);
-void parsingXml(std::string &response, std::vector<Video> &vec, Channel &ch, Sqlite &db);
+void parsingXml(std::vector<Video> &vec, Channel &ch, Sqlite &db);
 size_t writeCallback(void* contents, size_t size, size_t nmemb, void* userp);
 void readFile(std::vector<std::string> &channels, const char * filename);
 std::string escapeHTML(const std::string_view data);

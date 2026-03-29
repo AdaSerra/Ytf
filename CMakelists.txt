@@ -50,11 +50,11 @@ include_directories(include .)
 # 4. Sources
 # ---------------------------------------------------------
 set(MY_SOURCES
-    ytf.cpp
-    sqll.cpp
-    types.cpp
-    util.cpp
-    console.cpp
+    src/ytf.cpp
+    src/sqll.cpp
+    src/types.cpp
+    src/util.cpp
+    src/console.cpp
 )
 
 set(DEP_SOURCES

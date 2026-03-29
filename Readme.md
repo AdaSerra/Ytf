@@ -119,7 +119,7 @@ Option	Description
   -k, --keep <number>     Max videos saved per author in database (min: 30)
   -L, --load <file>       Load a list of YouTube channel IDs from a text file
   -n, --new               Show feeds published in last 24 hours
-  -o, --order <s> [d]     Sort by 'd'ate, 'a'uthor, 't'itle, 's'tars, 'v'iews
+  -o, --order <s> [d]     Sort by 'a'uthor, d'ate, 'p'ercentage (s/v), 's'tars, 't'itle, 'v'iews
                           Direction 'up'/'down'. Defaults: a,t (up), others (down)
   -q, --quiet             Offline mode: list only videos in database
   -p, --purge             Remove incomplete entries and vacuum database

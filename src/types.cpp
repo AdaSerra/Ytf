@@ -86,15 +86,23 @@ void Video::printVideo(bool ext, int idx)
 
     std::cout << timeStr << "  ";
 
-    printLeftPadded(author, 22);
+    printLeftPadded(author, 20);
     std::cout.put(' ');
-    printLeftPadded(title, 52);
+    printLeftPadded(title, 50);
 
     if (ext)
-    {
+    {   
+        double perc = 0.0;
+
+        if (percent > 0.0)
+            perc = percent;
+        else if (views > 0 )
+            perc = static_cast<double>(stars) /views * 100;
+      
         std::cout << std::right
                   << std::setw(10) << views
-                  << std::setw(11) << stars << " ";
+                  << std::setw(10) << stars
+                  << std::setw(7) << perc << "% ";
     }
     else
     {
@@ -149,14 +157,14 @@ void Video::jsonVideo()
     //format ISO 8601: %Y-%m-%dT%H:%M:%S%z -> 2026-03-22T15:00:00+0100
    strftime(timeStr, sizeof(timeStr), "%Y-%m-%dT%H:%M:%S%z", &lt);
 
-   std::cout << " {"
-              << "\"published\":\"" << timeStr << "\","
-              << "\"author\":\""    << author << "\","
-              << "\"title\":\""     << title << "\","
-              << "\"views\":"       << views << "," 
-              << "\"stars\":"       << stars << ","
-              << "\"isShort\":"     << (sh ? "true": "false") <<","
-              << "\"url\":\""       << YTURL_SHORT << id << "\""
+   std::cout << " {\n"
+              << "\"published\":\"" << timeStr << "\",\n"
+              << "\"author\":\""    << author << "\",\n"
+              << "\"title\":\""     << title << "\",\n"
+              << "\"views\":"       << views << ",\n" 
+              << "\"stars\":"       << stars << ",\n"
+              << "\"isShort\":"     << (sh ? "true": "false") <<",\n"
+              << "\"url\":\""       << YTURL_SHORT << id << "\"\n"
               << "}";
 }
 

@@ -40,6 +40,7 @@ struct Channel
 {
     std::string id = "";
     std::string name = "";
+    std::string resXml = "";
     void printChannel() const;   
 };
 

@@ -703,9 +703,8 @@ void Sqlite::stat(int width)
         lastWeekC);
 
     std::cout << "\n---- ACTIVITY LAST 10 DAYS (" << last7d << std::left << std::setw(27) << " Videos) ---- "
-              << "------- TOP CHANNELS ---------          ------- BEST VIDEOS (s/v) ----- \n\n";
+              << "------- TOP CHANNELS ---------          ----- BEST VIDEOS (s/v) ---- \n\n";
 
-    std::cout << std::fixed << std::setprecision(2);
     for (size_t i = 0; i < lastWeek.size(); i++)
     {
 
@@ -733,7 +732,8 @@ void Sqlite::stat(int width)
         " COUNT(*)"
         "FROM Videos "
         "WHERE Timestamp >= strftime('%s','now','-56 days') "
-        "GROUP BY WeekRange ORDER BY 1 DESC LIMIT 10;",
+        "GROUP BY WeekRange "
+        "ORDER BY MIN(Timestamp) DESC LIMIT 10;",
         lastWeek);
 
     getCountPair(

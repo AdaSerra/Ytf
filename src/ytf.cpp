@@ -60,6 +60,8 @@ int main(int argc, char *argv[])
 
     std::ios_base::sync_with_stdio(false);
     std::cin.tie(nullptr);
+    std::cout << std::fixed << std::setprecision(2);
+    
 
     // database
     Sqlite db("local.db");
@@ -86,7 +88,7 @@ int main(int argc, char *argv[])
         //  --- Version
         if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--version") == 0)
         {
-            std::cout << YTFVERSION;
+            std::cout << YTF_VERSION;
             return 0;
         }
         //  --- about
@@ -318,6 +320,10 @@ int main(int argc, char *argv[])
                     db.f = TIMESTAMP;
                     db.d = DESC;
                     break;
+                case 'p':
+                    db.f = PERCENT;
+                    db.d = DESC;
+                    break;
                 default:
                     std::cerr << "[Order] Unknown order field: " << field << "\n";
                     return 1;
@@ -363,12 +369,12 @@ int main(int argc, char *argv[])
                 }
 
                 db.tpa[0] = stringToTp(argv[++i]);
-                if ( db.tpa[0] <= 0)
+                if (db.tpa[0] <= 0)
                 {
                     std::cerr << "[Time] Invalid date for equal\n";
                     return 1;
                 }
-                db.tpa[1] = db.tpa[0] + 24*60*60 - 1;
+                db.tpa[1] = db.tpa[0] + 24 * 60 * 60 - 1;
                 db.tf = EQUAL;
                 break;
             }
@@ -382,7 +388,7 @@ int main(int argc, char *argv[])
                 }
 
                 db.tpa[0] = stringToTp(argv[++i]);
-                if ( db.tpa[0] <= 0)
+                if (db.tpa[0] <= 0)
                 {
                     std::cerr << "[Time] Invalid date for before\n";
                     return 1;
@@ -431,7 +437,7 @@ int main(int argc, char *argv[])
                 if (db.tpa[1] < db.tpa[0])
                     std::swap(db.tpa[0], db.tpa[1]);
 
-                db.tpa[1] =  db.tpa[1] + 24*60*60 - 1;
+                db.tpa[1] = db.tpa[1] + 24 * 60 * 60 - 1;
                 db.tf = RANGE;
                 break;
             }
@@ -494,52 +500,80 @@ int main(int argc, char *argv[])
     if (!quiet)
     {
         curl_global_init(CURL_GLOBAL_ALL);
-        CURL *curl;
-        curl = curl_easy_init();
+        CURLM *multi_handle = curl_multi_init();
+        std::vector<CURL *> handles;
+      
+        curl_multi_setopt(multi_handle, CURLMOPT_MAX_TOTAL_CONNECTIONS, 5L); // max total connection
+        curl_multi_setopt(multi_handle, CURLMOPT_MAX_HOST_CONNECTIONS, 5L);  // max connection on single host
 
-        if (curl)
+        // 1. Preparazione delle richieste
+        for (auto &ch : chns)
         {
-            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
-            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
-            curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
-            for (auto &ch : chns)
+            CURL *eh = curl_easy_init();
+            if (eh)
             {
-                readBuffer.clear();
                 char url[512];
                 snprintf(url, sizeof(url), "%s%s", YTURL_FEED, ch.id.c_str());
-                curl_easy_setopt(curl, CURLOPT_URL, url);
 
-                CURLcode res = curl_easy_perform(curl);
+                ch.resXml.clear(); 
 
-                if (res == CURLE_OK)
-                {
-                    long http_code = 0;
-                    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+                curl_easy_setopt(eh, CURLOPT_URL, url);
+                curl_easy_setopt(eh, CURLOPT_USERAGENT, USER_AGENT);
+                curl_easy_setopt(eh, CURLOPT_TIMEOUT, 10L);       
+                curl_easy_setopt(eh, CURLOPT_CONNECTTIMEOUT, 5L);
+                curl_easy_setopt(eh, CURLOPT_WRITEFUNCTION, writeCallback);
+                curl_easy_setopt(eh, CURLOPT_WRITEDATA, &ch.resXml);
+                curl_easy_setopt(eh, CURLOPT_TCP_KEEPALIVE, 1L);
 
-                    if (http_code == 200)
-                    {
-                        parsingXml(readBuffer, videos, ch, db);
-                    }
-                    else
-                    {
-                        std::cerr << "[Curl] Error HTTP for channel " << ch.id << ": " << http_code << std::endl;
-                        continue;
-                    }
-                }
-                else
-                {
-                    std::cerr << "[Curl] Network error: " << curl_easy_strerror(res) << std::endl;
-                    return 1;
-                }
+               
+                curl_easy_setopt(eh, CURLOPT_PRIVATE, &ch);
 
-                std::this_thread::sleep_for(std::chrono::milliseconds(80));
+                curl_multi_add_handle(multi_handle, eh);
+                handles.push_back(eh);
+            }
+        }
+
+     
+        int still_running = 0;
+        do
+        {
+            curl_multi_perform(multi_handle, &still_running);
+            if (still_running)
+            {
+                curl_multi_wait(multi_handle, NULL, 0, 1000, NULL);
+            }
+        } while (still_running);
+
+      
+        for (CURL *eh : handles)
+        {
+            long http_code = 0;
+            Channel *ch_ptr; 
+
+            curl_easy_getinfo(eh, CURLINFO_RESPONSE_CODE, &http_code);
+            curl_easy_getinfo(eh, CURLINFO_PRIVATE, &ch_ptr); 
+
+            if (http_code == 200)
+            {
+              
+                parsingXml(videos, *ch_ptr, db);
+            }
+            else
+            {
+                std::cerr << "[Curl] Error HTTP " << http_code << " for " << ch_ptr->id << std::endl;
             }
 
-            newvideo = db.insertVideosBatch(videos);
-
-            videos.clear();
+            curl_multi_remove_handle(multi_handle, eh);
+            curl_easy_cleanup(eh);
         }
+
+      
+        newvideo = db.insertVideosBatch(videos);
+        videos.clear();
+
+        curl_multi_cleanup(multi_handle);
         curl_global_cleanup();
+     
     }
 
     // flag new/recent video

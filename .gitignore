@@ -8,6 +8,8 @@ data*
 *.ico
 *.dll
 *.json
+*.gz
+release.ps1
 index.txt
 /junk
 /lib
@@ -15,3 +17,4 @@ index.txt
 /.vscode
 /build
 /include/curl
+/release
