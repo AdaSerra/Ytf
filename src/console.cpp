@@ -2,7 +2,7 @@
 #include <string>
 #include <iomanip>
 #include <utf8proc.h>
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
 #else
 #include <sys/ioctl.h>

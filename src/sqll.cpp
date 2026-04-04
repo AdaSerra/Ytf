@@ -111,7 +111,6 @@ void Sqlite::getCountPair(const char *sql, std::vector<std::pair<std::string, in
 
 void Sqlite::open(const char *file)
 {
-
     rc = sqlite3_open(file, &db);
     if (rc != SQLITE_OK)
     {
@@ -125,7 +124,6 @@ void Sqlite::open(const char *file)
     execpreset("PRAGMA foreign_keys = ON;");
 
     // version
-
     version = genericQuery<int>("PRAGMA user_version;");
 
     if (version < 1)
@@ -173,7 +171,7 @@ int Sqlite::updateChannel(const Channel &ch)
     rc = sqlite3_prepare_v2(db, query, -1, &st.ptr, nullptr);
     if (rc != SQLITE_OK)
     {
-        handleError("Errore prepare updateChannel ");
+        handleError("Error prepare updateChannel ");
         return 0;
     }
 
@@ -204,7 +202,7 @@ int Sqlite::insertChannel(const std::string &chid)
     rc = sqlite3_prepare_v2(db, query, -1, &st.ptr, nullptr);
     if (rc != SQLITE_OK)
     {
-        handleError("Errore prepare insertChannel ");
+        handleError("Error prepare insertChannel ");
         return 0;
     }
 
@@ -214,7 +212,7 @@ int Sqlite::insertChannel(const std::string &chid)
     if (rc == SQLITE_DONE)
         counter = sqlite3_changes(db); // 1 = insert, 0 = already present
     else
-        handleError("Errore insertChannel ");
+        handleError("Error insertChannel ");
 
     return counter;
 }
@@ -468,7 +466,7 @@ void Sqlite::trimAllAuthor()
         {
             sqlite3_bind_text(stmt2, 1, author.c_str(), -1, SQLITE_TRANSIENT);
             sqlite3_bind_text(stmt2, 2, author.c_str(), -1, SQLITE_TRANSIENT);
-            sqlite3_bind_int(stmt2, 3, limit - 1); // OFFSET 29 = 30°
+            sqlite3_bind_int(stmt2, 3, limit - 1); // OFFSET 29 = 30° with default limit
 
             sqlite3_step(stmt2);
             sqlite3_reset(stmt2); // Reset
@@ -610,21 +608,22 @@ void Sqlite::getVideoBoundaries(Video &out, bool desc, Field fd)
 
 void Sqlite::purge(size_t &dc, size_t &dv)
 {
+    // counters
     dc = 0;
     dv = 0;
 
     beginTransaction();
 
-    // 1. Pulizia Canali
+    // 1. cleanup channels
     if (sqlite3_exec(db, "DELETE FROM Channels WHERE Name IS NULL OR Name = '';", nullptr, nullptr, nullptr) == SQLITE_OK)
     {
-        dc = (size_t)sqlite3_changes(db); // Prendi il valore SUBITO
+        dc = (size_t)sqlite3_changes(db); 
     }
 
-    // 2. Pulizia Video
+    // 2. cleanup videos
     if (sqlite3_exec(db, "DELETE FROM Videos WHERE Title IS NULL OR Title = '';", nullptr, nullptr, nullptr) == SQLITE_OK)
     {
-        dv = (size_t)sqlite3_changes(db); // Prendi il valore SUBITO
+        dv = (size_t)sqlite3_changes(db); 
     }
 
     commitTransaction();
@@ -632,12 +631,12 @@ void Sqlite::purge(size_t &dc, size_t &dv)
     sqlite3_exec(db, "VACUUM;", nullptr, nullptr, nullptr);
 }
 
-void Sqlite::stat(int width)
+void Sqlite::stat(int width, const char * file)
 {
-    FILE *fi = fopen("local.db", "rb");
+    FILE *fi = fopen(file, "rb");
     if (!fi)
     {
-        std::cout << "Not database found\n";
+        std::cerr << "[System] Not file database found\n";
         exit(1);
     }
 
@@ -809,7 +808,7 @@ void Sqlite::close()
     rc = sqlite3_close(db);
     if (rc != SQLITE_OK)
     {
-        std::cerr << "[Sqlite] Warning: DB not closed: "
+        std::cerr << "[Sqlite] Warning: Database not closed: "
                   << sqlite3_errstr(rc) << std::endl;
     }
 

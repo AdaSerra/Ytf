@@ -1,17 +1,24 @@
-#include <cstddef>      
-#include <cstdint>      
+#include <cstddef>
+#include <cstdint>
 #include <iostream>
 #include <string>
 #include <ctime>
 #include <fstream>
 #include <vector>
+#include <filesystem>
 #define CURL_STATICLIB
 #include <curl/curl.h>
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
-#else
+#elif defined(__APPLE__)
+#include <mach-o/dyld.h>
+#include <limits.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
+#elif defined(__linux__) || defined (__unix__)
+#include <sys/ioctl.h>
+#include <unistd.h>
+#include <limits.h>
 #endif
 #include "const.h"
 #include "util.h"
@@ -124,9 +131,9 @@ void parsingXml(std::vector<Video> &vec, Channel &ch, Sqlite &db)
 
         // Video ID
         if (extract_xml_tag(inner, "yt:videoId", sub, sizeof(sub)))
-        {           
+        {
             memcpy(v.id, sub, sizeof(v.id));
-          //  std::cout << "extract: [" << sub << "] len=" << strlen(sub) << "\n";
+            //  std::cout << "extract: [" << sub << "] len=" << strlen(sub) << "\n";
             if (extract_xml_attr(inner, "link", "href", sub, sizeof(sub)))
             {
                 size_t ll = strlen(sub);
@@ -173,7 +180,6 @@ size_t writeCallback(void *contents, size_t size, size_t nmemb, void *userp)
     buffer->append(static_cast<const char *>(contents), totalSize);
     return totalSize;
 }
-
 
 void readFile(std::vector<std::string> &channels, const char *filename)
 {
@@ -314,8 +320,6 @@ void generateHTML(const std::vector<Video> &videos, size_t newchan, size_t newvi
     system(cmd);
 }
 
-
-
 bool parse_int(const char *str, int &out)
 {
     if (str == nullptr || *str == '\0')
@@ -381,10 +385,10 @@ bool isValidFilename(const char *filename)
         "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"};
 
 #ifdef _WIN32
-    #define stricmp _stricmp
+#define stricmp _stricmp
 #else
-  
-    #define stricmp strcasecmp
+
+#define stricmp strcasecmp
 #endif
     for (int i = 0; i < 22; i++)
     {
@@ -411,9 +415,9 @@ bool isValidFilename(const char *filename)
     return true;
 }
 
-time_t stringToTp(const char* dateStr) 
+time_t stringToTp(const char *dateStr)
 {
-   struct tm t;
+    struct tm t;
     memset(&t, 0, sizeof(t));
 
     int day, month, year;
@@ -422,12 +426,59 @@ time_t stringToTp(const char* dateStr)
         return (time_t)-1;
 
     t.tm_mday = day;
-    t.tm_mon  = month - 1;  
+    t.tm_mon = month - 1;
     t.tm_year = year - 1900;
 
     return mktime(&t);
 }
 
+std::string absPath(const char *filename)
+{
+    std::filesystem::path exeDir;
+    bool found = false;
+
+#if defined(_WIN32) || defined(_WIN64)
+    wchar_t buf[MAX_PATH];
+    DWORD len = GetModuleFileNameW(NULL, buf, MAX_PATH);
+
+    if (len > 0 && len < MAX_PATH)
+    {
+        exeDir = std::filesystem::path(buf).parent_path();
+        found = true;
+    }
+
+#elif defined(__APPLE__)
+    char buf[PATH_MAX];
+    uint32_t size = sizeof(buf);
+    if (_NSGetExecutablePath(buf, &size) == 0)
+    {
+        char realPathBuf[PATH_MAX];
+        if (realpath(buf, realPathBuf) != nullptr)
+        {
+            exeDir = std::filesystem::path(realPathBuf).parent_path();
+            found = true;
+        }
+    }
+
+#elif defined(__linux__) || defined (__unix__)
+    char buf[PATH_MAX];
+    ssize_t len = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
+    if (len != -1)
+    {
+        buf[len] = '\0';
+        exeDir = std::filesystem::path(buf).parent_path();
+        found = true;
+    }
+#endif
+
+    if(!found)
+    {
+        std::cerr <<"[System] Error: Unable to determine the executable directory.\n"
+                << "Please try running the program directly from its folder";
+        exit(1);
+    }
+    return (exeDir / filename).string();
+}
 
 /* void printLeftPaddedUTF8(std::string_view input, size_t width, size_t max_chars)
 {
@@ -443,7 +494,7 @@ time_t stringToTp(const char* dateStr)
     {
         unsigned char c = static_cast<unsigned char>(input[i]);
 
-        // 1. HTML entities 
+        // 1. HTML entities
         if (c == '&')
         {
             size_t semi = input.find(';', i);

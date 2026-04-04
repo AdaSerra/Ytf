@@ -8,7 +8,7 @@
 #include <chrono>
 #include <ctime>
 #include <vector>
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
 #endif
 #include <curl/curl.h>
@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
 
     // console setup
     width = getConsoleWidth();
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_WIN64)
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
     std::locale::global(std::locale("en_US.UTF-8"));
@@ -62,9 +62,11 @@ int main(int argc, char *argv[])
     std::cin.tie(nullptr);
     std::cout << std::fixed << std::setprecision(2);
     
+    //db path
+    std::string dbp = absPath(DB_NAME);
 
     // database
-    Sqlite db("local.db");
+    Sqlite db(dbp.c_str());
 
     // argument parsing
     for (int i = 1; i < argc; i++)
@@ -74,7 +76,8 @@ int main(int argc, char *argv[])
         // --- STATISTICS ---
         if (strcmp(argv[i], "--stat") == 0 || strcmp(argv[i], "-x") == 0)
         {
-            db.stat(width);
+
+            db.stat(width, dbp.c_str());
             return 0;
         }
 
@@ -219,6 +222,7 @@ int main(int argc, char *argv[])
                 return 1;
             }
 
+           // std::string fnp = absPath(filename)
             readFile(channels, filename);
 
             if (!channels.empty())

@@ -9,6 +9,7 @@ data*
 *.dll
 *.json
 *.gz
+*.bat
 release.ps1
 index.txt
 /junk

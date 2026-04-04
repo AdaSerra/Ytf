@@ -21,6 +21,7 @@ void generateHTML(const std::vector<Video> &videos, size_t newchan, size_t newvi
 bool parse_int(const char *str, int &out);
 bool isValidFilename(const char *filename);
 time_t stringToTp(const char* dateStr);
+std::string absPath(const char* filename);
 
 inline bool isValidChannelID(std::string &id) 
 {

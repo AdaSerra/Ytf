@@ -81,7 +81,7 @@ public:
     int insertVideosBatch(const std::vector<Video> &videos);
     void getVideoBoundaries(Video &out, bool desc, Field fd);
     void purge(size_t &dc, size_t &dv);
-    void stat(int width);
+    void stat(int width, const char* file);
     void close();
 };
 
