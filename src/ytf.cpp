@@ -18,13 +18,13 @@
 #include "types.h"
 #include "util.h"
 
-#pragma comment(lib, "libcurl.lib")
 
 int main(int argc, char *argv[])
 {
 
     uint32_t limit = DEFAULT_LIMIT_CONSOLE;
     uint32_t keep = DEFAULT_LIMIT_FEED;
+    std::string urlstring = YTURL_SHORT;
     int width = DEFAULT_WIDTH_CONSOLE;
 
     char *filename = nullptr;
@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
     std::string dbp = absPath(DB_NAME);
 
     // database
-    Sqlite db(dbp.c_str());
+    Sqlite db(dbp.c_str(),urlstring);
 
     // argument parsing
     for (int i = 1; i < argc; i++)
@@ -204,6 +204,29 @@ int main(int argc, char *argv[])
             }
             continue;
         }
+        // --- CHANGE URL YOUTUBE STRING
+        if (strcmp(argv[i], "-u") == 0 || strcmp(argv[i], "--change-url") == 0)
+        {
+             if (i + 1 >= argc)
+            {
+                std::cerr << "[System] Error: missing youtube url string\n";
+                return 1;
+            }
+
+           urlstring = argv[i + 1];
+
+            if (urlstring.length() > 30)
+            {
+                 std::cerr << "[System] Error: Url youtube string too long, max 30 characters\n";
+                 return 1;
+            }
+
+            db.saveSettings(-1, urlstring);
+            i++;
+
+            continue;
+        }
+
 
         // --- LOAD FILE -L ---
         if (strcmp(argv[i], "-L") == 0 || strcmp(argv[i], "--load") == 0)
@@ -625,13 +648,14 @@ int main(int argc, char *argv[])
         std::cout << "New Video(s): " << newvideo << "\n";
     if (newchan > 0)
         std::cout << "New Channel(s): " << newchan << "\n";
-
+    
+   
     for (size_t i = 0; i < videos.size(); i++)
     {
         if (extendFormat)
-            videos[i].printVideo(true, i);
+            videos[i].printVideo(true, urlstring,i);
         else
-            videos[i].printVideo(false);
+            videos[i].printVideo(false,urlstring);
     }
 
     std::cout << "\n";

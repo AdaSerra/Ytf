@@ -6,8 +6,8 @@
 inline constexpr const char* YTURL_FULL = "https://www.youtube.com/watch?v=";
 inline constexpr const char* YTURL_SHORT = "https://youtu.be/";
 inline constexpr const char* YTURL_FEED = "https://www.youtube.com/feeds/videos.xml?channel_id=";
-inline constexpr const char * YTF_VERSION = "1.2.2";
-inline constexpr const char * YTF_BUILD_DATE = "04-09-2026";
+inline constexpr const char * YTF_VERSION = "1.2.3";
+inline constexpr const char * YTF_BUILD_DATE = "26-09-2026";
 inline constexpr const char * DB_NAME = "local.db";
 
 constexpr uint32_t DEFAULT_LIMIT_CONSOLE = 20;

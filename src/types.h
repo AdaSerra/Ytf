@@ -59,7 +59,7 @@ public:
     Video() = default;
     Video(const std::string &wi, time_t nt, const std::string &ti, const std::string &au, const std::string &idStr, bool sh);
     time_t getTime(const std::string &iso);
-    void printVideo(bool ext, int idx = 0);
+    void printVideo(bool ext, std::string urlstring, int idx = 0);
     void jsonVideo();
     void clear();
     

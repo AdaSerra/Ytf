@@ -3,7 +3,7 @@
 $srcCpp = @("./src/ytf.cpp", "./src/sqll.cpp", "./src/types.cpp","./src/util.cpp", "./src/console.cpp")
 $srcC   = @("./dep/sqlite3.c", "./dep/utf8proc.c")
 $includes = "./include"
-#$libs = "./lib"
+$libs = "./lib"
 $outBase = "ytf"
 
 # Detect OS
@@ -30,7 +30,7 @@ if ($onWindows) {
         "/I$includes",
         "/I."
     )
-    $linkFlags = @("/LTCG", "/OPT:REF", "/OPT:ICF")#"/LIBPATH:$libs")
+    $linkFlags = @("/LTCG", "/OPT:REF", "/OPT:ICF", "/LIBPATH:$libs")
     $outFile = "$outBase.exe"
 
     Write-Host "Compiling with MSVC..."

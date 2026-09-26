@@ -63,14 +63,14 @@ public:
     time_t tpa[2];
 
     Sqlite();
-    Sqlite(const char *file);
+    Sqlite(const char *file, std::string &yturl);
     ~Sqlite();
 
-    void open(const char *file);
+    void open(const char *file, std::string &yturl);
     void beginTransaction();
     void commitTransaction();
     void rollbackTransaction();
-    void saveSettings(int keepFeed = -1);
+    void saveSettings(int keepFeed = -1, std::string = "");
     int updateChannel(const Channel &ch);
     int insertChannel(const std::string &chid);
     int removeChannel(const std::string &name);

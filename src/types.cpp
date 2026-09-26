@@ -66,7 +66,7 @@ Video::Video(const std::string &wi, time_t nt, const std::string &ti, const std:
     id[sizeof(id) - 1] = '\0';
 }
 
-void Video::printVideo(bool ext, int idx)
+void Video::printVideo(bool ext, std::string urlstring, int idx)
 {
     char timeStr[22];
     struct tm lt;
@@ -109,12 +109,12 @@ void Video::printVideo(bool ext, int idx)
         std::cout << "       ";
     }
 
-    std::cout <<" "<< YTURL_SHORT << id;
+    std::cout <<" "<< urlstring << id;
 
     if (ext && sh)
         std::cout << "  S";
 
-    std::cout << '\n';
+    std::cout.put('\n');
 }
 /*  void printVideoExt(int idx)
  {
@@ -164,7 +164,7 @@ void Video::jsonVideo()
               << "\"views\":"       << views << ",\n" 
               << "\"stars\":"       << stars << ",\n"
               << "\"isShort\":"     << (sh ? "true": "false") <<",\n"
-              << "\"url\":\""       << YTURL_SHORT << id << "\"\n"
+              << "\"url\":\""       << YTURL_FULL << id << "\"\n"
               << "}";
 }
 

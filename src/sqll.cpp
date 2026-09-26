@@ -8,9 +8,10 @@
 #include "sqll.h"
 #include "types.h"
 #include "console.h"
+#include "const.h"
 
 Sqlite::Sqlite() = default;
-Sqlite::Sqlite(const char *file) { open(file); }
+Sqlite::Sqlite(const char *file, std::string &yturl) { open(file, yturl); }
 Sqlite::~Sqlite() { close(); }
 
 void Sqlite::handleError(const char *msg)
@@ -109,7 +110,7 @@ void Sqlite::getCountPair(const char *sql, std::vector<std::pair<std::string, in
     }
 }
 
-void Sqlite::open(const char *file)
+void Sqlite::open(const char *file, std::string &yturl)
 {
     rc = sqlite3_open(file, &db);
     if (rc != SQLITE_OK)
@@ -136,31 +137,71 @@ void Sqlite::open(const char *file)
         execpreset("PRAGMA user_version = 1;");
         version = 1;
     }
-}
 
-void Sqlite::saveSettings(int keepFeed)
-{
-    const char *query =
-        "INSERT INTO Setting (id, Keep_Feed, Last_updated) "
-        "VALUES (1, CASE WHEN ?1 = -1 THEN 30 ELSE ?1 END, strftime('%s', 'now')) "
-        "ON CONFLICT(id) DO UPDATE SET "
-        "Keep_Feed = CASE WHEN ?1 = -1 THEN Keep_Feed ELSE ?1 END, "
-        "Last_updated = strftime('%s', 'now');";
-
-    Stmt st{nullptr};
-
-    if (sqlite3_prepare_v2(db, query, -1, &st.ptr, nullptr) != SQLITE_OK)
+    if (version < 2)
     {
-        handleError("Error prepare saveSetting:");
-        return;
+        execpreset("ALTER TABLE Setting ADD COLUMN YT_String TEXT;");
+        std::string query_update = "UPDATE Setting SET YT_String = '" + std::string(YTURL_SHORT) + "' WHERE id = 1;";
+        execpreset(query_update.c_str());
+        execpreset("PRAGMA user_version = 2;");
+        version = 2;
     }
 
-    sqlite3_bind_int(st.ptr, 1, keepFeed);
+    yturl =genericQuery<std::string>("SELECT YT_String FROM Setting WHERE id = 1;");
 
-    rc = sqlite3_step(st.ptr);
 
-    if (rc != SQLITE_DONE)
-        handleError("Error saveSetting:");
+}
+
+void Sqlite::saveSettings(int keepFeed, std::string newurl)
+{
+    if (newurl.empty())
+    {
+        const char *query =
+            "INSERT INTO Setting (id, Keep_Feed, Last_updated) "
+            "VALUES (1, CASE WHEN ?1 = -1 THEN 30 ELSE ?1 END, strftime('%s', 'now')) "
+            "ON CONFLICT(id) DO UPDATE SET "
+            "Keep_Feed = CASE WHEN ?1 = -1 THEN Keep_Feed ELSE ?1 END, "
+            "Last_updated = strftime('%s', 'now');";
+
+        Stmt st{nullptr};
+
+        if (sqlite3_prepare_v2(db, query, -1, &st.ptr, nullptr) != SQLITE_OK)
+        {
+            handleError("Error prepare saveSetting:");
+            return;
+        }
+
+        sqlite3_bind_int(st.ptr, 1, keepFeed);
+
+        rc = sqlite3_step(st.ptr);
+
+        if (rc != SQLITE_DONE)
+            handleError("Error saveSetting:");
+    }
+
+    else
+    {
+        const char *query =
+            "INSERT INTO Setting (id, YT_String, Last_updated) "
+            "VALUES (1, ?, strftime('%s', 'now')) "
+            "ON CONFLICT(id) DO UPDATE SET "
+            "YT_String = excluded.YT_String, "
+            "Last_updated = strftime('%s', 'now');";
+
+        Stmt st{nullptr};
+
+        if (sqlite3_prepare_v2(db, query, -1, &st.ptr, nullptr) != SQLITE_OK)
+        {
+            handleError("Error prepare saveSetting:");
+            return;
+        }
+
+        sqlite3_bind_text(st.ptr, 1, newurl.c_str(), -1, SQLITE_TRANSIENT);
+         rc = sqlite3_step(st.ptr);
+
+        if (rc != SQLITE_DONE)
+            handleError("Error saveSetting:");
+    }
 }
 
 int Sqlite::updateChannel(const Channel &ch)
@@ -617,13 +658,13 @@ void Sqlite::purge(size_t &dc, size_t &dv)
     // 1. cleanup channels
     if (sqlite3_exec(db, "DELETE FROM Channels WHERE Name IS NULL OR Name = '';", nullptr, nullptr, nullptr) == SQLITE_OK)
     {
-        dc = (size_t)sqlite3_changes(db); 
+        dc = (size_t)sqlite3_changes(db);
     }
 
     // 2. cleanup videos
     if (sqlite3_exec(db, "DELETE FROM Videos WHERE Title IS NULL OR Title = '';", nullptr, nullptr, nullptr) == SQLITE_OK)
     {
-        dv = (size_t)sqlite3_changes(db); 
+        dv = (size_t)sqlite3_changes(db);
     }
 
     commitTransaction();
@@ -631,7 +672,7 @@ void Sqlite::purge(size_t &dc, size_t &dv)
     sqlite3_exec(db, "VACUUM;", nullptr, nullptr, nullptr);
 }
 
-void Sqlite::stat(int width, const char * file)
+void Sqlite::stat(int width, const char *file)
 {
     FILE *fi = fopen(file, "rb");
     if (!fi)
@@ -647,6 +688,7 @@ void Sqlite::stat(int width, const char * file)
     int totalVideos = genericQuery<int>("SELECT COUNT(*) FROM Videos;");
     int totalChannels = genericQuery<int>("SELECT COUNT(*) FROM Channels;");
     int keep = genericQuery<int>("SELECT Keep_Feed FROM Setting WHERE id = 1;");
+    std::string yturl =genericQuery<std::string>("SELECT YT_String FROM Setting WHERE id = 1;");
     int last24h = genericQuery<int>("SELECT COUNT(*) FROM Videos WHERE Timestamp > strftime('%s','now') - 86400;");
     int last7d = genericQuery<int>("SELECT COUNT(*) FROM Videos WHERE Timestamp > strftime('%s','now') - 604800;");
     int last2m = genericQuery<int>("SELECT COUNT(*) FROM Videos WHERE Timestamp > strftime('%s','now','-56 days');");
@@ -768,18 +810,18 @@ void Sqlite::stat(int width, const char * file)
     }
 
     responsiveConsole(" NEWEST AND OLDEST VIDEO ", width);
-    v2.printVideo(false);
-    v1.printVideo(false);
+    v2.printVideo(false,yturl);
+    v1.printVideo(false,yturl);
     responsiveConsole(" FIRST AND LAST VIEWS VIDEO ", width);
     std::cout << std::left << std::setw(13) << v4.views;
-    v4.printVideo(false);
+    v4.printVideo(false,yturl);
     std::cout << std::left << std::setw(13) << v3.views;
-    v3.printVideo(false);
+    v3.printVideo(false,yturl);
     responsiveConsole(" FIRST AND LAST STARS VIDEO ", width);
     std::cout << std::left << std::setw(13) << v6.stars;
-    v6.printVideo(false);
+    v6.printVideo(false,yturl);
     std::cout << std::left << std::setw(13) << v5.stars;
-    v5.printVideo(false);
+    v5.printVideo(false,yturl);
 
     std::cout << "\n----------- DATABASE STATISTICS ----------------\n\n"
               << "Database size: " << size / 1024 << " kb\n"
